@@ -25,21 +25,40 @@
   }
   *{ box-sizing: border-box; }
   html, body{
-    margin:0; padding:0; height:100%;
+    margin:0; padding:0; min-height:100vh;
     background: var(--bg);
     font-family: "Noto Sans KR", sans-serif;
     color: var(--ink);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
-  .stage{ width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .stage{ 
+    width: 100vw; 
+    min-height: 100vh; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 20px 0;
+  }
   .screen{
-    display: none; width: 960px; height: 700px;
-    max-width: 96vw; max-height: 96vh; position: relative;
+    display: none; width: 960px; min-height: 700px;
+    max-width: 96vw; position: relative;
   }
   .screen.active{ display: flex; flex-direction: column; }
 
+  /* 히든 이스터에그 클릭 영역 */
+  #easterEggTrigger {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 120px;
+    height: 120px;
+    z-index: 999;
+    cursor: default;
+  }
+
   /* ---------- START SCREEN ---------- */
-  #screen-start{ align-items:center; justify-content:center; text-align:center; gap: 8px; overflow-y:auto; }
+  #screen-start{ align-items:center; justify-content:center; text-align:center; gap: 8px; }
   .eyebrow{ font-size: 13px; letter-spacing: 3px; color: var(--accent-dark); font-weight:700; margin-bottom: 6px; }
   h1.game-title{ font-family:"Jua", sans-serif; font-size: 40px; margin: 0; letter-spacing: 1px; }
   h1.game-title .dot-o{ color: var(--accent); }
@@ -152,7 +171,19 @@
   .end-eyebrow{ font-size:14px; color:var(--sub); font-weight:700; letter-spacing:2px; }
   .end-total{ font-family:"Jua", sans-serif; font-size: 78px; margin: 10px 0 0; color: var(--accent-dark); }
   .end-total span{ font-size: 26px; color: var(--sub); font-family:"Noto Sans KR"; }
-  .round-scores{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width: 540px; margin: 22px 0 26px; }
+  
+  .time-taken-box {
+    margin: 12px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    background: #F0EEE3;
+    padding: 8px 20px;
+    border-radius: 20px;
+    display: inline-block;
+  }
+
+  .round-scores{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width: 540px; margin: 16px 0 26px; }
   .round-chip{ background: #F5F3EA; border-radius: 10px; padding:8px 12px; font-size: 13px; font-weight:700; min-width: 58px; }
   .round-chip .r{ display:block; font-size:10px; color:var(--sub); font-weight:600; }
   .end-btns{ display:flex; gap:14px; justify-content:center; }
@@ -160,9 +191,69 @@
   .btn:hover{ transform: translateY(-2px); }
   .btn-primary{ background: var(--accent); color:white; }
   .btn-ghost{ background:#F0EEE3; color: var(--ink); }
+
+  /* ---------- DEV HACK MODAL ---------- */
+  #devHackModal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.75);
+    z-index: 10000;
+    align-items: center; justify-content: center;
+  }
+  .dev-modal-content {
+    background: #1e1e24;
+    color: #00ff66;
+    font-family: monospace;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 0 20px rgba(0,255,102,0.3);
+    width: 440px;
+    max-width: 90vw;
+  }
+  .dev-modal-content h3 {
+    margin-top: 0;
+    color: #00ff66;
+    border-bottom: 1px solid #00ff66;
+    padding-bottom: 8px;
+    font-size: 20px;
+  }
+  .dev-btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  .dev-btn {
+    background: #2a2a35;
+    color: #ffffff;
+    border: 1px solid #00ff66;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+  }
+  .dev-btn:hover {
+    background: #00ff66;
+    color: #000;
+  }
+  .dev-close-btn {
+    margin-top: 15px;
+    width: 100%;
+    background: #ff4757;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
+
+<div id="easterEggTrigger"></div>
 
 <div class="stage">
 
@@ -231,6 +322,7 @@
     <div class="end-card">
       <div class="end-eyebrow">도형 콤플렉스 퀴즈 결과</div>
       <div class="end-total"><span id="endTotal">0</span><span> / 100점</span></div>
+      <div class="time-taken-box">⏱ 총 소요 시간: <span id="timeTakenVal">0초</span></div>
       <div class="round-scores" id="roundScores"></div>
       <div class="end-btns">
         <button class="btn btn-primary" id="retryBtn">다시 도전하기</button>
@@ -239,6 +331,21 @@
     </div>
   </div>
 
+</div>
+
+<!-- 개발자 모드 이스터에그 모달 -->
+<div id="devHackModal">
+  <div class="dev-modal-content">
+    <h3>⚡ DEVELOPER HACK MODE</h3>
+    <p>> 치트 모드가 활성화되었습니다.</p>
+    <div class="dev-btn-group">
+      <button class="dev-btn" onclick="devAddScore(100)">💯 점수 100점 만들기</button>
+      <button class="dev-btn" onclick="devAutoCorrect()">🎯 현재 문제 즉시 정답</button>
+      <button class="dev-btn" onclick="devSkipRound()">⏩ 라운드 스킵</button>
+      <button class="dev-btn" onclick="devInstantEnd()">🏁 게임 즉시 완료</button>
+    </div>
+    <button class="dev-close-btn" onclick="closeDevModal()">닫기</button>
+  </div>
 </div>
 
 <script>
@@ -276,8 +383,8 @@ function rotatePointsN(points, thetaDeg){
     return [ cx + dx*Math.cos(t) - dy*Math.sin(t), cy + dx*Math.sin(t) + dy*Math.cos(t) ];
   });
 }
-function adist(p,q){ return Math.hypot(p[0]-q[0], p[1]-q[1]); }
-function dist(a,b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+function adist(p,q){ return Math.hypot(p[0]-q[0], p[1]-q[1]); } // 배열 좌표용
+function dist(a,b){ return Math.hypot(a.x - b.x, a.y - b.y); }  // {x,y} 객체용
 const LABELS = { yes:'맞다', no:'아니다', unknown:'모른다' };
 
 /* =========================================================
@@ -464,6 +571,9 @@ function drawCircumFeedback(pts, click){
     drawDistLabel(mx, my, d.toFixed(0), '#FF9F43', '#7A4A00');
   });
 }
+function clearCanvas(){
+  ctx.clearRect(0,0,W,H); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0,0,W,H);
+}
 
 /* =========================================================
    [이등변삼각형] 판단 문제 생성 + SVG
@@ -474,26 +584,26 @@ function genAllSidesEqualPair(){
   let lo = Math.max(1, a-4);
   if(lo>hi) lo = hi;
   const c = Math.max(1, randInt(lo,hi));
-  return { mode:'ALL_SIDES', sides:[a,a,c], visSides:[1,1,1], answer:'yes', explain:'두 변의 길이가 같으므로 이등변삼각형이에요.' };
+  return { mode:'ALL_SIDES', sides:[a,a,c], visSides:[1,1,1], answer:'yes' };
 }
 function genEquilateral(){
   const a = randInt(4,13);
-  return { mode:'ALL_SIDES', sides:[a,a,a], visSides:[1,1,1], answer:'yes', explain:'세 변의 길이가 모두 같으므로 이등변삼각형이에요.' };
+  return { mode:'ALL_SIDES', sides:[a,a,a], visSides:[1,1,1], answer:'yes' };
 }
 function genTwoSidesEqualYes(){
   const a = randInt(4,13);
-  return { mode:'TWO_SIDES', sides:[a,a,null], visSides:[1,1,0], answer:'yes', explain:'두 변의 길이가 같으므로 이등변삼각형이에요.' };
+  return { mode:'TWO_SIDES', sides:[a,a,null], visSides:[1,1,0], answer:'yes' };
 }
 function genSAS(){
   const a = randInt(4,12);
   const ang = randInt(30,110);
-  return { mode:'SAS', sides:[a,a,null], includedAngleIdx:1, includedAngleDeg:ang, visSides:[1,1,0], visAngleIdx:1, answer:'yes', explain:'두 변의 길이가 같으므로 이등변삼각형이에요.' };
+  return { mode:'SAS', sides:[a,a,null], includedAngleIdx:1, includedAngleDeg:ang, visSides:[1,1,0], visAngleIdx:1, answer:'yes' };
 }
 function genThreeAnglesTwoEqual(){
   const eq = randInt(20,75);
   const third = 180 - 2*eq;
   const arr = shuffle([eq, eq, third]);
-  return { mode:'THREE_ANGLES', angles:arr, answer:'yes', explain:'두 밑각의 크기가 같으므로 이등변삼각형이에요.' };
+  return { mode:'THREE_ANGLES', angles:arr, answer:'yes' };
 }
 function genAllSidesAllDifferent(){
   let a,b,c, tries=0;
@@ -505,7 +615,7 @@ function genAllSidesAllDifferent(){
     tries++;
   } while((a+b<=c || a+c<=b || b+c<=a) && tries<20);
   if(a+b<=c || a+c<=b || b+c<=a){ a=5; b=6; c=7; }
-  return { mode:'ALL_SIDES', sides:[a,b,c], visSides:[1,1,1], answer:'no', explain:'세 변의 길이가 모두 다르므로 이등변삼각형이 아니에요.' };
+  return { mode:'ALL_SIDES', sides:[a,b,c], visSides:[1,1,1], answer:'no' };
 }
 function genThreeAnglesAllDifferent(){
   let a0,a1,a2, tries=0;
@@ -514,7 +624,7 @@ function genThreeAnglesAllDifferent(){
     tries++;
   } while((a2<25||a2>120||a0===a1||a1===a2||a0===a2) && tries<50);
   if(a2<25||a2>120||a0===a1||a1===a2||a0===a2){ a0=50; a1=60; a2=70; }
-  return { mode:'THREE_ANGLES', angles:[a0,a1,a2], answer:'no', explain:'세 각의 크기가 모두 다르므로 이등변삼각형이 아니에요.' };
+  return { mode:'THREE_ANGLES', angles:[a0,a1,a2], answer:'no' };
 }
 function genTwoSidesDiffUnknown(){
   let a,b;
@@ -524,19 +634,19 @@ function genTwoSidesDiffUnknown(){
   const sides=[null,null,null], vis=[1,1,1];
   let vi=0;
   for(let i=0;i<3;i++){ if(i===hiddenPos){ sides[i]=null; vis[i]=0; } else { sides[i]=vals[vi++]; } }
-  return { mode:'TWO_SIDES', sides, visSides:vis, answer:'unknown', explain:'나머지 한 변의 길이를 알 수 없어 이등변삼각형인지 단정할 수 없어요.' };
+  return { mode:'TWO_SIDES', sides, visSides:vis, answer:'unknown' };
 }
 function genOneSideUnknown(){
   const a = randInt(4,14);
   const pos = randInt(0,2);
   const sides=[null,null,null]; sides[pos]=a;
   const vis=[0,0,0]; vis[pos]=1;
-  return { mode:'ONE_SIDE', sides, visSides:vis, answer:'unknown', explain:'한 변의 정보만으로는 이등변삼각형인지 알 수 없어요.' };
+  return { mode:'ONE_SIDE', sides, visSides:vis, answer:'unknown' };
 }
 function genSideAngleAdj(){
   const a = randInt(5,12);
   const ang = randInt(25,110);
-  return { mode:'SIDE_ANGLE_ADJ', sides:[a,null,null], includedAngleIdx:1, includedAngleDeg:ang, visSides:[1,0,0], visAngleIdx:1, answer:'unknown', explain:'정보가 부족하여 이등변삼각형인지 단정할 수 없어요.' };
+  return { mode:'SIDE_ANGLE_ADJ', sides:[a,null,null], includedAngleIdx:1, includedAngleDeg:ang, visSides:[1,0,0], visAngleIdx:1, answer:'unknown' };
 }
 const ISO_YES_GENS = [genAllSidesEqualPair, genEquilateral, genTwoSidesEqualYes, genSAS, genThreeAnglesTwoEqual];
 const ISO_NO_GENS = [genAllSidesAllDifferent, genThreeAnglesAllDifferent];
@@ -1169,7 +1279,7 @@ function q7BuildQuestion(seedIdx){
 }
 
 /* =========================================================
-   전체 진행 컨트롤러
+   전체 진행 컨트롤러 & 이스터에그 / 소요시간
 ========================================================= */
 let roundIndex = 0;
 const totalRounds = 10;
@@ -1182,6 +1292,62 @@ let answeredClick = false, answeredJudge = false;
 let currentClickShape = null, currentTarget = null, currentJudgeQuestion = null;
 let roundTimeoutId = null, tickIntervalId = null;
 const RING_CIRC = 2 * Math.PI * 64;
+
+/* 시간 측정용 변수 */
+let gameStartTime = 0;
+
+/* 개발자 모드 이스터에그 변수 및 이벤트 Listener */
+let devClickCount = 0;
+let devClickTimer = null;
+
+document.getElementById('easterEggTrigger').addEventListener('click', () => {
+  devClickCount++;
+  clearTimeout(devClickTimer);
+  devClickTimer = setTimeout(() => {
+    devClickCount = 0;
+  }, 2500);
+
+  if (devClickCount >= 10) {
+    devClickCount = 0;
+    document.getElementById('devHackModal').style.display = 'flex';
+  }
+});
+
+function closeDevModal() {
+  document.getElementById('devHackModal').style.display = 'none';
+}
+
+function devAddScore(val) {
+  totalScore = val;
+  document.getElementById('totalScoreLive').textContent = totalScore;
+  closeDevModal();
+}
+
+function devAutoCorrect() {
+  closeDevModal();
+  if (document.getElementById('screen-game').classList.contains('active')) {
+    const meta = TYPE_META[currentRoundType];
+    if (meta.kind === 'click') {
+      handleClickAnswer(currentTarget);
+    } else {
+      onJudgeAnswer(currentJudgeQuestion.answer);
+    }
+  }
+}
+
+function devSkipRound() {
+  closeDevModal();
+  if (document.getElementById('screen-game').classList.contains('active')) {
+    clearTimeout(roundTimeoutId); clearInterval(tickIntervalId);
+    nextRound();
+  }
+}
+
+function devInstantEnd() {
+  closeDevModal();
+  roundIndex = totalRounds;
+  endGame();
+}
 
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -1210,6 +1376,7 @@ function startGame(){
   roundIndex = 0; totalScore = 0; roundRecords = [];
   roundOrder = generateRoundOrder();
   q7Queue = [];
+  gameStartTime = Date.now();
   document.getElementById('totalScoreLive').textContent = '0';
   showScreen('screen-game');
   nextRound();
@@ -1365,71 +1532,52 @@ function renderJudgePanel(type, meta, q){
 function onJudgeAnswer(choice){
   if(answeredJudge) return;
   answeredJudge = true;
-  const meta = TYPE_META[currentRoundType];
-  const q = currentJudgeQuestion;
-  const isCorrect = (choice === q.answer);
-  const score = isCorrect ? 10 : 0;
+  const type = currentRoundType, meta = TYPE_META[type], q = currentJudgeQuestion;
+  const correct = (choice === q.answer);
+  const score = correct ? 10 : 0;
   totalScore += score;
-  roundRecords.push({ type: currentRoundType, score });
+  roundRecords.push({ type, score });
   document.getElementById('totalScoreLive').textContent = Math.round(totalScore * 10) / 10;
-
-  const row = document.getElementById('choicesRow');
-  const btns = row.querySelectorAll('.choice-btn');
   if(meta.uiStyle === 'multi'){
-    btns.forEach(b => {
+    document.querySelectorAll('#choicesRow .choice-btn').forEach(b=>{
+      b.style.pointerEvents = 'none';
       if(b.dataset.ans === q.answer) b.classList.add('correct');
-      if(b.dataset.ans === choice && !isCorrect) b.classList.add('wrong');
+      else if(b.dataset.ans === choice) b.classList.add('wrong');
     });
+    document.getElementById('explainNote').innerHTML = `<b>정답: ${q.answer}</b> · ${q.explain}`;
   } else {
-    row.innerHTML = '';
-    const fb = document.createElement('div');
-    fb.className = 'feedback-inline ' + (isCorrect ? 'right' : 'wrong');
-    fb.textContent = isCorrect ? '⭕ 정답입니다! (+10점)' : '❌ 틀렸습니다! (정답: ' + LABELS[q.answer] + ')';
-    row.appendChild(fb);
+    const row = document.getElementById('choicesRow');
+    row.innerHTML = `<div class="feedback-inline ${correct?'right':'wrong'}">
+      ${correct ? '정답이에요! 🎉' : '오답! 정답은 "'+LABELS[q.answer]+'"'}
+    </div>`;
+    document.getElementById('explainNote').innerHTML = `<b>${LABELS[q.answer]}</b> · ${q.explain}`;
   }
-
-  const expEl = document.getElementById('explainNote');
-  if(q.explain){
-    expEl.innerHTML = '<b>[해설]</b> ' + q.explain;
-  }
-
-  setTimeout(() => { nextRound(); }, 2200);
+  setTimeout(() => { nextRound(); }, 1300);
 }
 
-/* ---- 게임 종료 ---- */
+/* ---- 종료 화면 ---- */
 function endGame(){
-  showScreen('screen-end');
-  const finalScore = Math.round(totalScore * 10) / 10;
-  document.getElementById('endTotal').textContent = finalScore;
-  const container = document.getElementById('roundScores');
-  container.innerHTML = '';
-  roundRecords.forEach((r, idx) => {
-    const meta = TYPE_META[r.type];
+  clearCanvas();
+  
+  // 소요시간 계산
+  const timeTakenSec = Math.floor((Date.now() - gameStartTime) / 1000);
+  const min = Math.floor(timeTakenSec / 60);
+  const sec = timeTakenSec % 60;
+  const timeString = min > 0 ? `${min}분 ${sec}초` : `${sec}초`;
+  document.getElementById('timeTakenVal').textContent = timeString;
+
+  document.getElementById('endTotal').textContent = Math.round(totalScore * 10) / 10;
+  const wrap = document.getElementById('roundScores');
+  wrap.innerHTML = '';
+  roundRecords.forEach((rec, i) => {
+    const meta = TYPE_META[rec.type];
     const chip = document.createElement('div');
     chip.className = 'round-chip';
-    chip.innerHTML = `<span class="r">R${idx+1} ${meta.icon}</span>${r.score.toFixed(1)}점`;
-    container.appendChild(chip);
+    chip.style.borderLeft = `4px solid ${meta.color}`;
+    chip.innerHTML = `<span class="r">R${i+1} ${meta.icon}</span>${rec.score.toFixed(1)}`;
+    wrap.appendChild(chip);
   });
-}
-
-/* =========================================================
-   이스터에그 (Easter Egg) 유지 로직
-   - 시작 화면의 타이틀 점/아이콘 연달아 클릭 시 시각적 효과
-========================================================= */
-let secretClickCount = 0;
-const dotEl = document.querySelector('.dot-o');
-if(dotEl){
-  dotEl.style.cursor = 'pointer';
-  dotEl.addEventListener('click', (e) => {
-    e.stopPropagation();
-    secretClickCount++;
-    if(secretClickCount >= 5){
-      secretClickCount = 0;
-      document.body.style.transition = 'filter 0.5s ease';
-      document.body.style.filter = 'hue-rotate(180deg)';
-      setTimeout(() => { document.body.style.filter = 'none'; }, 3000);
-    }
-  });
+  showScreen('screen-end');
 }
 </script>
 </body>
