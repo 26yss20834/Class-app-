@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>중2-2 수학 퀴즈 게임</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&display=swap');
+
+    :root {
+      --bg-color: #f4f7f6;
+      --card-bg: #ffffff;
+      --primary: #4a90e2;
+      --accent: #ff6b6b;
+      --text: #333333;
+      --shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow-y: auto; /* 전체 스크롤 지원 */
+    }
+
+    /* 개발자 치트 트리거 존 (좌측 상단 Invisible Box) */
+    #devTrigger {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 45px;
+      height: 45px;
+      z-index: 9999;
+      cursor: default;
+    }
+
+    /* 개발자 모달 & 제어판 */
+    .dev-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .dev-box {
+      background: #1e1e24;
+      color: #00ffcc;
+      font-family: monospace;
+      padding: 24px;
+      border-radius: 12px;
+      width: 340px;
+      box-shadow: 0 0 20px rgba(0,255,204,0.3);
+      border: 1px solid #00ffcc;
+    }
+
+    .dev-box h3 {
+      margin-top: 0;
+      color: #fff;
+      text-align: center;
+      border-bottom: 1px solid #333;
+      padding-bottom: 8px;
+    }
+
+    .dev-btn {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      background: #2a2a35;
+      color: #00ffcc;
+      border: 1px solid #00ffcc;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .dev-btn:hover {
+      background: #00ffcc;
+      color: #1e1e24;
+    }
+
+    /* 게임 컨테이너 스크롤 지원 */
+    .game-container {
+      width: 100%;
+      max-width: 600px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      position: relative;
+      max-height: 95vh;
+      overflow-y: auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-family: 'Jua', sans-serif;
+      font-size: 1.5rem;
+      color: var(--primary);
+      margin: 0;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    .stat-badge {
+      background: #eef4fb;
+      padding: 6px 12px;
+      border-radius: 12px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+
+    .stage-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .instruction {
+      font-size: 1.1rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 12px;
+      min-height: 2.5em;
+    }
+
+    /* 캔버스 & SVG 디스플레이 영역 */
+    .display-box {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      border: 2px solid #eee;
+      border-radius: 16px;
+      background: #fafafa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    canvas, svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      touch-action: none;
+    }
+
+    /* 보기 선택 버튼 */
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .btn-opt {
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      background: #fff;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-opt:hover {
+      border-color: var(--primary);
+      background: #eef4fb;
+    }
+
+    .btn-opt.correct {
+      background: #4caf50 !important;
+      color: white;
+      border-color: #4caf50;
+    }
+
+    .btn-opt.wrong {
+      background: #f44336 !important;
+      color: white;
+      border-color: #f44336;
+    }
+
+    .explain-note {
+      margin-top: 12px;
+      padding: 10px;
+      background: #fff8e1;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* 메인 시작 및 결과 화면 */
+    .screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .btn-main {
+      padding: 14px 32px;
+      font-family: 'Jua', sans-serif;
+      font-size: 1.3rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(74,144,226,0.4);
+      margin-top: 16px;
+    }
+
+    .btn-main:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 개발자 암호/치트 트리거 (왼쪽 위 7번 클릭) -->
+  <div id="devTrigger"></div>
+
+  <!-- 개발자 암호창 & 치트 패널 모달 -->
+  <div class="dev-modal" id="devModal">
+    <div class="dev-box">
+      <h3>⚡ DEV CHEAT PANEL ⚡</h3>
+      <div id="devContent">
+        <p style="text-align:center; font-size:0.85rem;">치트 기능을 선택하세요.</p>
+        <button class="dev-btn" onclick="devAutoCompleteAll()">🚀 모든 문제 자동 100점 통과</button>
+        <button class="dev-btn" onclick="devAutoCorrectSingle()">⏩ 현재 문제 자동 정답 처리</button>
+        <button class="dev-btn" onclick="devToggleGodMode()">🎯 무조건 만점 클릭 모드 (On/Off)</button>
+        <div style="margin: 10px 0; border-top:1px dashed #444; padding-top:8px;">
+          <div>⏱️ 소요 시간 조작:</div>
+          <button class="dev-btn" style="width:30%; display:inline-block;" onclick="devAddTIme(-10)">-10초</button>
+          <button class="dev-btn" style="width:30%; display:inline-block;" onclick="devAddTIme(10)">+10초</button>
+          <button class="dev-btn" style="width:35%; display:inline-block;" onclick="devResetTime()">0초 리셋</button>
+        </div>
+        <button class="dev-btn" style="background:#444; color:#fff;" onclick="closeDevModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-container">
+    <!-- 시작 화면 -->
+    <div id="startScreen" class="screen">
+      <h1 class="title" style="font-size: 2rem; margin-bottom: 12px;">📐 중2-2 도형 마스터</h1>
+      <p style="color: #666; line-height: 1.6;">
+        내심/외심 찾기부터 이등변삼각형, 평행사변형, 사각형의 성질까지!<br>
+        총 10문제를 풀고 최고 점수와 기록에 도전해 보세요.
+      </p>
+      <button class="btn-main" onclick="startGame()">게임 시작하기</button>
+    </div>
+
+    <!-- 플레이 화면 -->
+    <div id="playScreen" class="screen" style="display: none;">
+      <header style="width: 100%;">
+        <h2 class="title" id="roundTitle">Round 1/10</h2>
+        <div class="stats-bar">
+          <div class="stat-badge">⏱️ <span id="timerText">00:00</span></div>
+          <div class="stat-badge">⭐ <span id="scoreText">0</span>점</div>
+        </div>
+      </header>
+
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+
+      <div class="stage-area" style="width: 100%;">
+        <div class="instruction" id="instructionText">문제를 읽고 정답을 선택하세요.</div>
+
+        <div class="display-box">
+          <canvas id="gameCanvas" width="320" height="320"></canvas>
+          <svg id="gameSVG" width="320" height="320" style="display: none;"></svg>
+        </div>
+
+        <div class="options-grid" id="optionsGrid"></div>
+        <div class="explain-note" id="explainNote"></div>
+      </div>
+    </div>
+
+    <!-- 최종 결과 화면 -->
+    <div id="resultScreen" class="screen" style="display: none;">
+      <h1 class="title" style="font-size: 2rem; margin-bottom: 8px;">🎉 수고하셨습니다!</h1>
+      <p id="resultRank" style="font-weight: bold; font-size: 1.2rem; color: var(--primary); margin-bottom: 16px;"></p>
+      
+      <div style="background: #f9f9f9; padding: 20px; border-radius: 16px; width: 100%; margin-bottom: 16px;">
+        <p style="font-size: 1.1rem; margin: 8px 0;">총점: <strong id="finalScore" style="color: var(--accent); font-size: 1.5rem;">0</strong> / 100점</p>
+        <p style="font-size: 1.1rem; margin: 8px 0;">총 소요 시간: <strong id="finalTime">00:00</strong></p>
+      </div>
+
+      <button class="btn-main" onclick="startGame()">다시 도전하기</button>
+    </div>
+  </div>
+
+  <script>
+    // --- 글로벌 상태 변수 ---
+    let rounds = [];
+    let currentRoundIdx = 0;
+    let totalScore = 0;
+    let gameTimerInterval = null;
+    let totalElapsedSeconds = 0;
+    let isGodMode = false;
+    let devClickCount = 0;
+    let devClickTimer = null;
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const svg = document.getElementById('gameSVG');
+
+    // --- 개발자 암호 & 치트 트리거 로직 ---
+    document.getElementById('devTrigger').addEventListener('click', () => {
+      devClickCount++;
+      clearTimeout(devClickTimer);
+      
+      if (devClickCount >= 7) {
+        devClickCount = 0;
+        const password = prompt("개발자 암호를 입력하세요:");
+        if (password === "Dkaghdi00!") {
+          document.getElementById('devModal').style.display = 'flex';
+        } else if (password !== null) {
+          alert("암호가 올바르지 않습니다.");
+        }
+      } else {
+        devClickTimer = setTimeout(() => { devClickCount = 0; }, 3000);
+      }
+    });
+
+    function closeDevModal() {
+      document.getElementById('devModal').style.display = 'none';
+    }
+
+    // 치트 1: 모든 문제 100점 즉시 완성
+    function devAutoCompleteAll() {
+      totalScore = 100;
+      currentRoundIdx = rounds.length;
+      closeDevModal();
+      endGame();
+    }
+
+    // 치트 2: 현재 문제 자동 10점 처리
+    function devAutoCorrectSingle() {
+      totalScore += 10;
+      document.getElementById('scoreText').textContent = totalScore;
+      closeDevModal();
+      nextRound();
+    }
+
+    // 치트 3: 점 찍기 만점 모드
+    function devToggleGodMode() {
+      isGodMode = !isGodMode;
+      alert(`무조건 만점 모드: ${isGodMode ? "켜짐(ON)" : "꺼짐(OFF)"}`);
+      closeDevModal();
+    }
+
+    // 치트 4: 시간 조작
+    function devAddTIme(sec) {
+      totalElapsedSeconds = Math.max(0, totalElapsedSeconds + sec);
+      updateTimerDisplay();
+    }
+    function devResetTime() {
+      totalElapsedSeconds = 0;
+      updateTimerDisplay();
+    }
+
+    // --- 게임 핵심 로직 ---
+    function startGame() {
+      totalScore = 0;
+      currentRoundIdx = 0;
+      totalElapsedSeconds = 0;
+      rounds = generateRounds();
+      
+      document.getElementById('startScreen').style.display = 'none';
+      document.getElementById('resultScreen').style.display = 'none';
+      document.getElementById('playScreen').style.display = 'flex';
+      
+      startGlobalTimer();
+      loadRound();
+    }
+
+    function startGlobalTimer() {
+      clearInterval(gameTimerInterval);
+      updateTimerDisplay();
+      gameTimerInterval = setInterval(() => {
+        totalElapsedSeconds++;
+        updateTimerDisplay();
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const m = String(Math.floor(totalElapsedSeconds / 60)).padStart(2, '0');
+      const s = String(totalElapsedSeconds % 60).padStart(2, '0');
+      document.getElementById('timerText').textContent = `${m}:${s}`;
+    }
+
+    function generateRounds() {
+      // 5개 핵심 유형 x 2문제 = 10라운드 생성
+      const types = ['incenter', 'circumcenter', 'isosceles', 'parallelogram', 'quad_classify'];
+      let pool = [];
+      types.forEach(t => {
+        pool.push(createQuestion(t));
+        pool.push(createQuestion(t));
+      });
+      // 셔플
+      return pool.sort(() => Math.random() - 0.5);
+    }
+
+    function createQuestion(type) {
+      if (type === 'incenter') {
+        const pts = generateRandomTriangle();
+        const inc = getIncenter(pts);
+        return { type: 'incenter', title: '내심 찾기', prompt: '삼각형의 내심(내접원의 중심) 위치를 클릭하세요!', points: pts, target: inc, explain: '내심은 세 내각의 이등분선의 교점입니다.' };
+      } else if (type === 'circumcenter') {
+        const pts = generateRandomTriangle();
+        const circum = getCircumcenter(pts);
+        return { type: 'circumcenter', title: '외심 찾기', prompt: '삼각형의 외심(외접원의 중심) 위치를 클릭하세요!', points: pts, target: circum, explain: '외심은 세 변의 수직이등분선의 교점입니다.' };
+      } else if (type === 'isosceles') {
+        const isIso = Math.random() < 0.5;
+        const angle = isIso ? Math.floor(Math.random() * 40) + 40 : Math.floor(Math.random() * 30) + 30;
+        return {
+          type: 'judge', title: '이등변삼각형 판별',
+          prompt: '다음 삼각형은 이등변삼각형일까요?',
+          svgData: drawIsoTriangleSVG(angle, isIso),
+          options: ['맞다 (O)', '아니다 (X)'],
+          answer: isIso ? 0 : 1,
+          explain: isIso ? `두 밑각의 크기가 같으므로 이등변삼각형입니다.` : `세 각의 크기가 모두 달라 이등변삼각형이 아닙니다.`
+        };
+      } else if (type === 'parallelogram') {
+        const isPara = Math.random() < 0.5;
+        return {
+          type: 'judge', title: '평행사변형 조건',
+          prompt: '조건을 만족하는 사각형은 평행사변형일까요?',
+          svgData: drawParaSVG(isPara),
+          options: ['맞다 (O)', '아니다 (X)'],
+          answer: isPara ? 0 : 1,
+          explain: isPara ? '두 쌍의 대변이 각각 평행하므로 평행사변형입니다.' : '평행사변형이 되기 위한 조건에 부합하지 않습니다.'
+        };
+      } else { // quad_classify
+        const quadTypes = ['사다리꼴', '평행사변형', '직사각형', '마름모', '정사각형'];
+        const chosen = quadTypes[Math.floor(Math.random() * quadTypes.length)];
+        return {
+          type: 'judge', title: '사각형의 분류',
+          prompt: `다음 중 '${chosen}'의 성질에 해당하는 것은?`,
+          svgData: drawQuadTypeSVG(chosen),
+          options: ['한 쌍의 대변만 평행', '두 쌍의 대변이 평행', '네 내각의 크기가 모두 같음', '네 변의 길이가 모두 같음'],
+          answer: getQuadAnswerIndex(chosen),
+          explain: `${chosen}의 정의 및 성질을 올바르게 구별하는 문제입니다.`
+        };
+      }
+    }
+
+    function loadRound() {
+      const q = rounds[currentRoundIdx];
+      document.getElementById('roundTitle').textContent = `Round ${currentRoundIdx + 1}/10 - ${q.title}`;
+      document.getElementById('instructionText').textContent = q.prompt;
+      document.getElementById('scoreText').textContent = totalScore;
+      document.getElementById('explainNote').style.display = 'none';
+      document.getElementById('progressFill').style.width = `${((currentRoundIdx) / 10) * 100}%`;
+
+      const optGrid = document.getElementById('optionsGrid');
+      optGrid.innerHTML = '';
+
+      if (q.type === 'incenter' || q.type === 'circumcenter') {
+        canvas.style.display = 'block';
+        svg.style.display = 'none';
+        drawTriangleCanvas(q.points);
+        canvas.onclick = (e) => handleCanvasClick(e, q);
+      } else {
+        canvas.style.display = 'none';
+        svg.style.display = 'block';
+        svg.innerHTML = q.svgData;
+        
+        q.options.forEach((optText, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'btn-opt';
+          btn.textContent = optText;
+          btn.onclick = () => handleOptionClick(idx, q.answer, q.explain);
+          optGrid.appendChild(btn);
+        });
+      }
+    }
+
+    // Canvas 좌표 클릭 및 점수 산정 로직
+    function handleCanvasClick(e, q) {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      let dist = Math.hypot(clickX - q.target.x, clickY - q.target.y);
+      let scoreObtained = 0;
+
+      if (isGodMode || dist < 15) scoreObtained = 10;
+      else if (dist < 30) scoreObtained = 8;
+      else if (dist < 50) scoreObtained = 5;
+      else scoreObtained = 2;
+
+      totalScore += scoreObtained;
+
+      // 시각적 피드백 (정답 위치 및 클릭 위치 표시)
+      drawTriangleCanvas(q.points);
+      ctx.beginPath();
+      ctx.arc(clickX, clickY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff4757';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(q.target.x, q.target.y, 8, 0, Math.PI * 2);
+      ctx.strokeStyle = '#2ed573';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      const note = document.getElementById('explainNote');
+      note.style.display = 'block';
+      note.innerHTML = `🎯 획득 점수: <strong>${scoreObtained}점</strong> (오차: ${Math.round(dist)}px)<br>${q.explain}`;
+
+      setTimeout(() => { nextRound(); }, 1800);
+    }
+
+    function handleOptionClick(selectedIdx, correctIdx, explain) {
+      const btns = document.querySelectorAll('.btn-opt');
+      btns.forEach((btn, idx) => {
+        btn.disabled = true;
+        if (idx === correctIdx) btn.classList.add('correct');
+        if (idx === selectedIdx && selectedIdx !== correctIdx) btn.classList.add('wrong');
+      });
+
+      if (selectedIdx === correctIdx) totalScore += 10;
+
+      const note = document.getElementById('explainNote');
+      note.style.display = 'block';
+      note.innerHTML = explain;
+
+      setTimeout(() => { nextRound(); }, 1800);
+    }
+
+    function nextRound() {
+      currentRoundIdx++;
+      if (currentRoundIdx < rounds.length) {
+        loadRound();
+      } else {
+        endGame();
+      }
+    }
+
+    function endGame() {
+      clearInterval(gameTimerInterval);
+      document.getElementById('playScreen').style.display = 'none';
+      document.getElementById('resultScreen').style.display = 'flex';
+
+      document.getElementById('finalScore').textContent = totalScore;
+      document.getElementById('finalTime').textContent = document.getElementById('timerText').textContent;
+
+      let rank = '';
+      if (totalScore >= 90) rank = '🏆 수학의 신! (A+)';
+      else if (totalScore >= 70) rank = '🌟 도형 마스터! (A)';
+      else if (totalScore >= 50) rank = '👍 참 잘했어요! (B)';
+      else rank = '📖 조금 더 연습해봐요! (C)';
+      
+      document.getElementById('resultRank').textContent = rank;
+    }
+
+    // --- 도형 수학 및 SVG 로직 ---
+    function generateRandomTriangle() {
+      return [
+        { x: 160, y: 50 },
+        { x: 50, y: 260 },
+        { x: 270, y: 260 }
+      ];
+    }
+
+    function getIncenter(pts) {
+      const [A, B, C] = pts;
+      const a = Math.hypot(B.x - C.x, B.y - C.y);
+      const b = Math.hypot(A.x - C.x, A.y - C.y);
+      const c = Math.hypot(A.x - B.x, A.y - B.y);
+      const P = a + b + c;
+      return { x: (a*A.x + b*B.x + c*C.x)/P, y: (a*A.y + b*B.y + c*C.y)/P };
+    }
+
+    function getCircumcenter(pts) {
+      const [A, B, C] = pts;
+      const D = 2 * (A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y));
+      const Ux = ((A.x**2 + A.y**2)*(B.y - C.y) + (B.x**2 + B.y**2)*(C.y - A.y) + (C.x**2 + C.y**2)*(A.y - B.y)) / D;
+      const Uy = ((A.x**2 + A.y**2)*(C.x - B.x) + (B.x**2 + B.y**2)*(A.x - C.x) + (C.x**2 + C.y**2)*(B.x - A.x)) / D;
+      return { x: Ux, y: Uy };
+    }
+
+    function drawTriangleCanvas(pts) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      ctx.lineTo(pts[1].x, pts[1].y);
+      ctx.lineTo(pts[2].x, pts[2].y);
+      ctx.closePath();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#4a90e2';
+      ctx.fillStyle = '#eef4fb';
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function drawIsoTriangleSVG(angle, isIso) {
+      return `<polygon points="160,40 60,260 260,260" fill="#eef4fb" stroke="#4a90e2" stroke-width="3"/>
+              <text x="160" y="80" text-anchor="middle" font-weight="bold">${angle}°</text>
+              <text x="80" y="250" text-anchor="middle" font-weight="bold">${isIso ? (180-angle)/2 : 65}°</text>`;
+    }
+
+    function drawParaSVG(isPara) {
+      return `<polygon points="70,70 270,70 230,250 30,250" fill="#eef4fb" stroke="#4a90e2" stroke-width="3"/>
+              <text x="170" y="60" text-anchor="middle">A</text>
+              <text x="280" y="70" text-anchor="middle">B</text>`;
+    }
+
+    function drawQuadTypeSVG(type) {
+      return `<rect x="60" y="60" width="200" height="200" rx="10" fill="#eef4fb" stroke="#4a90e2" stroke-width="3"/>
+              <text x="160" y="165" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">${type}</text>`;
+    }
+
+    function getQuadAnswerIndex(type) {
+      switch(type) {
+        case '사다리꼴': return 0;
+        case '평행사변형': return 1;
+        case '직사각형': return 2;
+        case '마름모': return 3;
+        default: return 1;
+      }
+    }
+  </script>
+</body>
+</html>
